@@ -1,0 +1,47 @@
+# github.com/golang/protobuf v0.0.0-20170920220647-130e6b02ab05
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/timestamp
+# github.com/hashicorp/consul v0.9.3
+github.com/hashicorp/consul/api
+# github.com/hashicorp/go-cleanhttp v0.0.0-20170211013415-3573b8b52aa7
+github.com/hashicorp/go-cleanhttp
+# github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90
+github.com/hashicorp/go-rootcerts
+# github.com/hashicorp/serf v0.8.1
+github.com/hashicorp/serf/coordinate
+# github.com/mitchellh/go-homedir v0.0.0-20161203194507-b8bc1bf76747
+github.com/mitchellh/go-homedir
+# golang.org/x/net v0.0.0-20171004034648-a04bdaca5b32
+golang.org/x/net/context
+golang.org/x/net/http2
+golang.org/x/net/trace
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/lex/httplex
+golang.org/x/net/internal/timeseries
+# golang.org/x/text v0.0.0-20171006144033-825fc78a2fd6
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+# google.golang.org/genproto v0.0.0-20171002232614-f676e0f3ac63
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v1.6.0
+google.golang.org/grpc
+google.golang.org/grpc/naming
+google.golang.org/grpc/codes
+google.golang.org/grpc/connectivity
+google.golang.org/grpc/credentials
+google.golang.org/grpc/grpclb/grpc_lb_v1/messages
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
+google.golang.org/grpc/peer
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
+google.golang.org/grpc/transport
