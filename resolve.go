@@ -1,35 +1,111 @@
+// Package discover implements consul dicovery for gRPC
+//
+// URI <scheme>://<authority>/<endpoint>
+//
 package discover
 
 import (
-	consul "github.com/hashicorp/consul/api"
+	"context"
+	"fmt"
+	"log"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/naming"
+	"github.com/hashicorp/consul/api"
+	"google.golang.org/grpc/resolver"
 )
 
-type Resolve struct {
-	addr string
-	tag  string
+type consulBuilder struct{}
+
+// Register resolver
+func init() {
+	resolver.Register(&consulBuilder{})
 }
 
-func WithResolver(addr, tag string) grpc.DialOption {
-	r := Resolve{addr: addr, tag: tag}
-	return grpc.WithBalancer(grpc.RoundRobin(r))
+// Scheme of resolver
+func (c *consulBuilder) Scheme() string {
+	return "consul"
 }
 
-// Resolve creates a Watcher for target
-func (r Resolve) Resolve(service string) (naming.Watcher, error) {
-	cfg := consul.DefaultConfig()
-	cfg.Address = r.addr
-	conn, err := consul.NewClient(cfg)
+// Build resover
+func (c *consulBuilder) Build(target resolver.Target, cc resolver.ClientConn, _ resolver.BuildOptions) (resolver.Resolver, error) {
+	cfg := api.DefaultConfig()
+	cfg.Address = target.Authority
+	client, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
-	w := &Watch{
-		nups: make(chan []*naming.Update),
-		errs: make(chan error),
-		done: make(chan bool),
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &consulResolver{
+		target: target,
+		conn:   cc,
+		cancel: cancel,
+		client: client,
+		opts:   new(api.QueryOptions).WithContext(ctx),
 	}
-	go w.watch(conn, service, r.tag)
-	return w, nil
+	go r.start(ctx)
+	return r, nil
+}
+
+type consulResolver struct {
+	target resolver.Target
+	conn   resolver.ClientConn
+	cancel context.CancelFunc
+	client *api.Client
+	opts   *api.QueryOptions
+	prev   []resolver.Address // previous resolved addresses
+}
+
+func (c *consulResolver) healthy() ([]resolver.Address, error) {
+	var a []resolver.Address
+	se, meta, err := c.client.Health().Service(c.target.Endpoint, "", true, c.opts)
+	if err != nil {
+		if c.opts.Context().Err() == context.Canceled {
+			return nil, nil
+		}
+		return nil, err
+	}
+	// setup next wait index for long polling
+	c.opts.WaitIndex = meta.LastIndex
+	for _, v := range se {
+		a = append(a, resolver.Address{
+			Addr: fmt.Sprintf("%s:%d", v.Service.Address, v.Service.Port),
+			Type: resolver.Backend,
+		})
+	}
+	return a, nil
+}
+
+func has(x []resolver.Address, a resolver.Address) bool {
+	for _, v := range x {
+		if v.Addr == a.Addr {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *consulResolver) start(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Printf("connection to %v closed", c.target.Endpoint)
+			return
+		default:
+			c.ResolveNow(resolver.ResolveNowOptions{})
+		}
+	}
+}
+
+func (c *consulResolver) ResolveNow(_ resolver.ResolveNowOptions) {
+	curr, err := c.healthy()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	c.prev = curr
+	c.conn.NewAddress(curr)
+}
+
+func (c *consulResolver) Close() {
+	log.Printf("closing connection to %v", c.target.Endpoint)
+	c.cancel()
 }
